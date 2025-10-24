@@ -21,8 +21,25 @@ export class StudentsService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const token = this.jwtService.sign({ id: student._id, email: student.email });
-    return { token };
+    const token = this.jwtService.sign({ 
+      id: student._id, 
+      email: student.email,
+      role: 'student',
+      studentId: student.studentId,
+    });
+
+    return { 
+      message: 'Login successful',
+      data: {
+        token,
+        student: {
+          id: student._id,
+          name: student.name,
+          email: student.email,
+          studentId: student.studentId,
+        },
+      },
+    };
   }
 
   async signupStudent(studentSignupDTO: StudentSignupDTO) {
@@ -44,15 +61,40 @@ export class StudentsService {
       studentId,
     });
 
-    const token = this.jwtService.sign({ id: student._id, email: student.email });
-    return { token };
+    const token = this.jwtService.sign({ 
+      id: student._id, 
+      email: student.email,
+      role: 'student',
+      studentId: student.studentId,
+    });
+
+    return { 
+      message: 'Signup successful',
+      data: {
+        token,
+        student: {
+          id: student._id,
+          name: student.name,
+          email: student.email,
+          studentId: student.studentId,
+        },
+      },
+    };
   }
 
   async getUpcomingLectures(studentId: string) {
     const now = new Date();
-    return this.lectureModel.find({
-      startTime: { $gt: now },
-    }).sort({ startTime: 1 }).limit(5);
+    const lectures = await this.lectureModel
+      .find({ startTime: { $gt: now }, status: { $ne: 'cancelled' } })
+      .populate('moduleId', 'moduleCode moduleName semester')
+      .populate('lecturerId', 'name email')
+      .sort({ startTime: 1 })
+      .limit(5);
+
+    return {
+      message: 'Upcoming lectures retrieved successfully',
+      data: lectures,
+    };
   }
 
   async getLectureTimeTable(studentId: string) {
@@ -63,8 +105,15 @@ export class StudentsService {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 7);
 
-    return this.lectureModel.find({
-      startTime: { $gte: startOfWeek, $lt: endOfWeek },
-    }).sort({ startTime: 1 });
+    const lectures = await this.lectureModel
+      .find({ startTime: { $gte: startOfWeek, $lt: endOfWeek }, status: { $ne: 'cancelled' } })
+      .populate('moduleId', 'moduleCode moduleName semester')
+      .populate('lecturerId', 'name email')
+      .sort({ startTime: 1 });
+
+    return {
+      message: 'Lecture timetable retrieved successfully',
+      data: lectures,
+    };
   }
 }
